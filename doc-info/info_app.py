@@ -38,7 +38,7 @@ def request_gpt(prompt, history_list, detected_lan):
     message_list = [
         {
             "role": "system",
-            "content": f"You are an assistant for medical professionals. Always answer in {detected_lan}. If you cannot, switch to English. When asked about a disease, search the 'disease' section of the provided data. If found, answer based on the document."
+            "content": f"You are an assistant for medical professionals. Always answer in {detected_lan}. If you cannot, switch to English. Your response should be concise and informative, not exceeding 1200 characters. When asked about a disease, search the 'disease' section of the provided data. If found, answer based on the document."
         }
     ]
 
@@ -49,7 +49,7 @@ def request_gpt(prompt, history_list, detected_lan):
         "messages": message_list,
         "temperature": 0.1,
         "top_p": 0.6,
-        "max_tokens": 800,
+        "max_tokens": 700,
         "data_sources": [
             {
                 "type": "azure_search",
@@ -124,7 +124,7 @@ def detect_language(text):
     if re.search(r"[가-힣]", text):
         return "korean"
     detected_language = detector.detect_language_of(text)
-    return detected_language.name.lower() if detected_language else "unknown"
+    return detected_language.name.lower() if detected_language else "english"
 
 # 영어로 번역하는 함수
 def translate_to_english(text):
@@ -144,7 +144,11 @@ def chat():
 
         history_list = get_history_messages(histories)
         detected_lan = detect_language(prompt)
-        trans_prompt = translate_to_english(prompt)
+        if detected_lan != "english":
+            trans_prompt = translate_to_english(prompt)
+        else:
+            trans_prompt = prompt  # 영어일 경우 번역 생략
+
 
         response_text, citation_html = request_gpt(trans_prompt, history_list, detected_lan)
         histories.append((prompt, response_text))
@@ -156,5 +160,5 @@ def chat():
 
 # Flask 실행 (개발 환경)
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080)) 
+    port = int(os.environ.get("PORT", 8080))  # Azure의 PORT 환경 변수 가져오기 (기본값 8080)
     app.run(host="0.0.0.0", port=port)
